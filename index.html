@@ -9,20 +9,22 @@
             margin: 0;
             padding: 0;
             height: 100%;
-            overflow: hidden; 
+            overflow: hidden; /* ซ่อน Scrollbar ของหน้าหลัก */
         }
         iframe {
-            border: none;
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            height: 100vh; 
-            display: block;
+            height: 100%;
+            border: none;
         }
     </style>
 </head>
 <body>
 
     <iframe src="https://script.google.com/macros/s/AKfycbya_vu3ie5RVvCuR-l09pxNbq0ozDCihJ-yDq1Z35GCLEzDS9DYbLDkXgJWIcOBSx4w2Q/exec">
-        Browser ของคุณไม่รองรับ iframe
+        เบราว์เซอร์ของคุณไม่รองรับการแสดงผล iframe
     </iframe>
 
 </body>
