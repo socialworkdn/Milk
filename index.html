@@ -2,11 +2,13 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>ระบบทะเบียนนมผสม</title><link rel="icon" type="image/png" href="https://img2.pic.in.th/Logo-sw.png">
+  <title>ระบบทะเบียนนมผสม</title>
+  <link rel="icon" type="image/png" href="https://img2.pic.in.th/Logo-sw.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
@@ -487,6 +489,76 @@
             <button type="submit" class="px-6 py-2 bg-pink-600 text-white rounded hover:bg-pink-700 shadow-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed">บันทึกเข้าคลัง</button>
         </div>
       </form>
+
+      <form id="formStockOut" onsubmit="handleStockOut(event)" class="bg-white border border-red-200 p-6 rounded-lg shadow-sm mt-6">
+        <h4 class="font-bold text-red-700 mb-1 border-b border-red-100 pb-2">➖ ตัดจ่ายนมออกจากคลัง (เหตุผลอื่น ๆ)</h4>
+        <p class="text-xs text-gray-500 mb-4">ใช้สำหรับกรณีนมหมดอายุ ชำรุด/เสียหาย หรือเหตุผลอื่นที่ไม่ใช่การจ่ายให้ผู้ป่วย — จะถูกหักออกจากยอดคงเหลือทันที</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+           <div>
+             <label class="block text-sm font-medium text-gray-700">วันที่ตัดจ่ายออก</label>
+             <input type="date" name="outDate" id="outDate" required class="mt-1 block w-full rounded-md border-gray-300 p-2 border focus:ring-red-500 focus:border-red-500">
+           </div>
+           <div>
+             <label class="block text-sm font-medium text-gray-700">สูตรนมที่ตัดออก</label>
+             <select name="outFormula" required class="mt-1 block w-full rounded-md border-gray-300 p-2 border focus:ring-red-500 focus:border-red-500">
+               <option value="สูตร 1">สูตร 1</option>
+               <option value="สูตร 2">สูตร 2</option>
+             </select>
+           </div>
+           <div>
+             <label class="block text-sm font-medium text-gray-700">เหตุผล <span class="text-red-500">*</span></label>
+             <select name="outReason" id="outReason" required onchange="toggleOtherReason()" class="mt-1 block w-full rounded-md border-gray-300 p-2 border focus:ring-red-500 focus:border-red-500">
+               <option value="">-- เลือกเหตุผล --</option>
+               <option value="นมหมดอายุ">นมหมดอายุ</option>
+               <option value="นมชำรุด/เสียหาย">นมชำรุด/เสียหาย</option>
+               <option value="อื่นๆ">อื่นๆ (ระบุ)</option>
+             </select>
+           </div>
+           <div id="outReasonOtherWrap" class="hidden">
+             <label class="block text-sm font-medium text-gray-700">ระบุเหตุผลอื่น ๆ</label>
+             <input type="text" name="outReasonOther" placeholder="ระบุเหตุผล" class="mt-1 block w-full rounded-md border-gray-300 p-2 border focus:ring-red-500 focus:border-red-500">
+           </div>
+           <div class="md:col-span-2">
+             <label class="block text-sm font-medium text-gray-700">หมายเหตุเพิ่มเติม</label>
+             <input type="text" name="outNote" placeholder="เช่น ล็อตที่ตัดออก, ผู้ตรวจสอบ..." class="mt-1 block w-full rounded-md border-gray-300 p-2 border focus:ring-red-500 focus:border-red-500">
+           </div>
+           <div class="bg-red-50 p-4 rounded border border-red-100">
+             <label class="block text-sm font-bold text-red-800">จำนวนลังที่ตัดออก</label>
+             <input type="number" name="outCartons" value="0" min="0" required class="mt-1 block w-full rounded-md border-gray-300 p-2 border">
+             <p class="text-xs text-gray-500 mt-1">* 1 ลัง = 12 กล่อง</p>
+           </div>
+           <div class="bg-orange-50 p-4 rounded border border-orange-100">
+             <label class="block text-sm font-bold text-orange-800">จำนวนกล่องเศษที่ตัดออก</label>
+             <input type="number" name="outBoxes" value="0" min="0" required class="mt-1 block w-full rounded-md border-gray-300 p-2 border">
+             <p class="text-xs text-gray-500 mt-1">* ใส่เฉพาะเศษกล่องที่ไม่ถึงลัง</p>
+           </div>
+        </div>
+        <div class="mt-6 flex justify-end">
+            <button type="submit" class="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 shadow-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed">บันทึกตัดจ่ายออก</button>
+        </div>
+      </form>
+
+      <div class="bg-white border border-gray-200 p-6 rounded-lg shadow-sm mt-6">
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-4 border-b pb-4">
+          <h4 class="font-bold text-gray-700">📋 ประวัติการเคลื่อนไหวคลังนม</h4>
+          <div class="flex flex-wrap items-end gap-3">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">ตั้งแต่วันที่</label>
+              <input type="date" id="logDateFrom" class="rounded-md border-gray-300 p-2 border text-sm">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">ถึงวันที่</label>
+              <input type="date" id="logDateTo" class="rounded-md border-gray-300 p-2 border text-sm">
+            </div>
+            <button onclick="applyInventoryLogFilter()" class="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">🔍 กรอง</button>
+            <button onclick="clearInventoryLogFilter()" class="border border-gray-300 px-4 py-2 rounded text-sm hover:bg-gray-50">ล้างตัวกรอง</button>
+            <button onclick="exportInventoryLogToExcel()" class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 flex items-center gap-1">📥 Export Excel</button>
+          </div>
+        </div>
+        <div id="inventoryLogContainer" class="overflow-x-auto">
+          <p class="text-center text-gray-400 py-6">กำลังโหลด...</p>
+        </div>
+      </div>
     </div>
 
     <div id="dashboardSection" class="bg-white p-8 rounded-lg shadow-lg hidden-section animate-fade-in">
@@ -632,7 +704,7 @@
     // =====================================================================
     // นำ URL ที่ได้จากการ Deploy โปรเจกต์ Apps Script (Deploy > Manage deployments)
     // มาแทนที่ค่านี้ ต้องลงท้ายด้วย /exec
-    const API_BASE_URL = "https://script.google.com/macros/s/AKfycbya_vu3ie5RVvCuR-l09pxNbq0ozDCihJ-yDq1Z35GCLEzDS9DYbLDkXgJWIcOBSx4w2Q/exec"; // <-- แก้เป็น URL จริง
+    const API_BASE_URL = "https://script.google.com/macros/s/AKfycbya_vu3ie5RVvCuR-l09pxNbq0ozDCihJ-yDq1Z35GCLEzDS9DYbLDkXgJWIcOBSx4w2Q/exec";
 
     // เรียก API แบบอ่านข้อมูล (GET) - คืนค่า data โดยตรง (โยน Error ถ้าไม่สำเร็จ)
     async function apiGet(action, params) {
@@ -687,6 +759,7 @@
       document.getElementById('receiveDate').valueAsDate = new Date();
       document.getElementById('registeredDate').valueAsDate = new Date();
       document.getElementById('addDate').valueAsDate = new Date();
+      document.getElementById('outDate').valueAsDate = new Date();
 
       updateRunningNumberShow();
 
@@ -749,6 +822,7 @@
         loadDashboardData();
       } else if (sectionId === 'inventory') {
         loadInventoryData();
+        loadInventoryLog();
       }
     }
 
@@ -1348,6 +1422,7 @@
            formEl.reset();
            document.getElementById('addDate').valueAsDate = new Date();
            loadInventoryData();
+           loadInventoryLog();
          } else {
            Swal.fire('เกิดข้อผิดพลาด', res.message, 'error');
          }
@@ -1355,6 +1430,158 @@
          setFormBusy(formEl, false);
          Swal.fire('เกิดข้อผิดพลาด', err.message || 'ไม่สามารถบันทึกข้อมูลได้', 'error');
        }
+    }
+
+    // --- ตัดจ่ายนมออกจากคลัง (เหตุผลอื่น ๆ เช่น หมดอายุ/ชำรุด) ---
+    function toggleOtherReason() {
+      const val = document.getElementById('outReason').value;
+      const wrap = document.getElementById('outReasonOtherWrap');
+      const input = wrap.querySelector('input[name="outReasonOther"]');
+      if (val === 'อื่นๆ') {
+        wrap.classList.remove('hidden');
+        input.required = true;
+      } else {
+        wrap.classList.add('hidden');
+        input.required = false;
+        input.value = '';
+      }
+    }
+
+    async function handleStockOut(e) {
+       e.preventDefault();
+       const formEl = e.target;
+       setFormBusy(formEl, true);
+       Swal.fire({
+         title: 'ยืนยันตัดจ่ายนมออก?',
+         text: 'จำนวนนี้จะถูกหักออกจากยอดคงเหลือทันที และไม่สามารถย้อนกลับได้จากหน้านี้',
+         icon: 'warning',
+         showCancelButton: true,
+         confirmButtonText: 'ยืนยัน',
+         cancelButtonText: 'ยกเลิก'
+       }).then(async (result) => {
+         if (!result.isConfirmed) { setFormBusy(formEl, false); return; }
+         Swal.fire({ title: 'กำลังบันทึก...', didOpen: () => Swal.showLoading() });
+         try {
+           const res = await apiPost('saveMilkStockOut', formToObject(formEl));
+           setFormBusy(formEl, false);
+           if (res.success) {
+             Swal.fire('สำเร็จ', res.message, 'success');
+             formEl.reset();
+             document.getElementById('outDate').valueAsDate = new Date();
+             toggleOtherReason();
+             loadInventoryData();
+             loadInventoryLog();
+           } else {
+             Swal.fire('เกิดข้อผิดพลาด', res.message, 'error');
+           }
+         } catch (err) {
+           setFormBusy(formEl, false);
+           Swal.fire('เกิดข้อผิดพลาด', err.message || 'ไม่สามารถบันทึกข้อมูลได้', 'error');
+         }
+       });
+    }
+
+    // --- ประวัติการเคลื่อนไหวคลังนม ---
+    let currentInventoryLogRows = [];
+
+    async function loadInventoryLog(dateFrom, dateTo) {
+      const container = document.getElementById('inventoryLogContainer');
+      container.innerHTML = '<p class="text-center text-gray-400 py-6">กำลังโหลด...</p>';
+      try {
+        const rows = await apiGet('getMilkInventoryLog', { dateFrom: dateFrom || '', dateTo: dateTo || '' });
+        currentInventoryLogRows = rows || [];
+        renderInventoryLog(currentInventoryLogRows);
+      } catch (err) {
+        container.innerHTML = '<p class="text-center text-red-500 py-6">โหลดประวัติไม่สำเร็จ</p>';
+      }
+    }
+
+    function applyInventoryLogFilter() {
+      const from = document.getElementById('logDateFrom').value;
+      const to = document.getElementById('logDateTo').value;
+      if (from && to && from > to) {
+        Swal.fire('แจ้งเตือน', '"ตั้งแต่วันที่" ต้องไม่มากกว่า "ถึงวันที่"', 'warning');
+        return;
+      }
+      loadInventoryLog(from, to);
+    }
+
+    function clearInventoryLogFilter() {
+      document.getElementById('logDateFrom').value = '';
+      document.getElementById('logDateTo').value = '';
+      loadInventoryLog();
+    }
+
+    function exportInventoryLogToExcel() {
+      if (!currentInventoryLogRows || currentInventoryLogRows.length === 0) {
+        Swal.fire('แจ้งเตือน', 'ไม่มีข้อมูลให้ Export ในตัวกรองปัจจุบัน', 'warning');
+        return;
+      }
+
+      const exportData = currentInventoryLogRows.map(r => ({
+        'วันที่': r.date ? new Date(r.date).toLocaleDateString('th-TH') : '-',
+        'ประเภทรายการ': r.entryType,
+        'สูตรนม': r.formula,
+        'จำนวน (ลัง)': r.cartons,
+        'จำนวน (กล่องเศษ)': r.boxes,
+        'รวม (กล่อง)': (r.entryType === 'ตัดจ่ายออก' ? '-' : '+') + r.totalBoxes,
+        'เหตุผล/หมายเหตุ': r.entryType === 'ตัดจ่ายออก' ? (r.reason || '-') : (r.note || '-')
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      ws['!cols'] = [{wch:12},{wch:14},{wch:10},{wch:10},{wch:14},{wch:12},{wch:30}];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'ประวัติคลังนม');
+
+      const from = document.getElementById('logDateFrom').value;
+      const to = document.getElementById('logDateTo').value;
+      const rangeLabel = (from || to) ? `_${from || 'เริ่มต้น'}_ถึง_${to || 'ปัจจุบัน'}` : '';
+      const fileName = `ประวัติคลังนม${rangeLabel}_${new Date().toISOString().slice(0,10)}.xlsx`;
+
+      XLSX.writeFile(wb, fileName);
+    }
+
+    function renderInventoryLog(rows) {
+      const container = document.getElementById('inventoryLogContainer');
+      if (!rows || rows.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-400 py-6">ไม่พบรายการเคลื่อนไหวตามเงื่อนไขที่เลือก</p>';
+        return;
+      }
+
+      let tableRows = rows.map(r => {
+        const isOut = r.entryType === 'ตัดจ่ายออก';
+        const d = r.date ? new Date(r.date).toLocaleDateString('th-TH') : '-';
+        const sign = isOut ? '-' : '+';
+        const colorClass = isOut ? 'text-red-600' : 'text-green-600';
+        const typeBadge = isOut
+          ? '<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">ตัดจ่ายออก</span>'
+          : '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">รับเข้า</span>';
+        return `
+          <tr class="border-b hover:bg-gray-50">
+            <td class="py-2 px-2">${d}</td>
+            <td class="py-2 px-2">${typeBadge}</td>
+            <td class="py-2 px-2">${r.formula}</td>
+            <td class="py-2 px-2 text-center font-bold ${colorClass}">${sign}${r.totalBoxes}</td>
+            <td class="py-2 px-2 text-sm text-gray-600">${isOut ? (r.reason || '-') : (r.note || '-')}</td>
+          </tr>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <p class="text-xs text-gray-400 mb-2">พบ ${rows.length} รายการ</p>
+        <table class="w-full text-left text-sm">
+          <thead class="bg-gray-100 text-gray-600">
+            <tr>
+              <th class="py-2 px-2 rounded-l">วันที่</th>
+              <th class="py-2 px-2">ประเภท</th>
+              <th class="py-2 px-2">สูตร</th>
+              <th class="py-2 px-2 text-center">จำนวน (กล่อง)</th>
+              <th class="py-2 px-2 rounded-r">เหตุผล/หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      `;
     }
 
   </script>
